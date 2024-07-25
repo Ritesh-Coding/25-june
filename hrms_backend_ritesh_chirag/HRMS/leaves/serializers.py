@@ -10,12 +10,12 @@ from authApp.models import Employee
 #created By Ritesh
 class EmployeeLeaveSerializer(serializers.ModelSerializer):
     total_approved_leaves = serializers.SerializerMethodField()
-    remaining_all_leaves =  serializers.SerializerMethodField()
+    # remaining_all_leaves =  serializers.SerializerMethodField()
      
 
     class Meta:
         model= Leaves
-        fields = ['id','date','type','status','reason','leave_day_type','total_approved_leaves','remaining_all_leaves']   
+        fields = ['id','date','type','status','reason','leave_day_type','total_approved_leaves']   
         read_only_fields = ["status"]
     
         
@@ -75,9 +75,9 @@ class EmployeeLeaveSerializer(serializers.ModelSerializer):
     def get_total_approved_leaves(self,obj):
         checkTotalLeaves = Leaves.objects.filter(employee_id = self.context['request'].user,status="Approved").count()
         return checkTotalLeaves
-    def get_remaining_all_leaves(self,obj):
-        checkAllLeaves = EmployeeLeaveAssignment.objects.filter(employee_id = self.context['request'].user).values('remaining_paid_leave','remaining_unpaid_leave','remaining_sick_leave','remaining_casual_leave')
-        return checkAllLeaves
+    # def get_remaining_all_leaves(self,obj):
+    #     checkAllLeaves = EmployeeLeaveAssignment.objects.filter(employee_id = self.context['request'].user).values('remaining_paid_leave','remaining_unpaid_leave','remaining_sick_leave','remaining_casual_leave')
+    #     return checkAllLeaves
    
 
 class AssignedLeaveSerializer(serializers.ModelSerializer):

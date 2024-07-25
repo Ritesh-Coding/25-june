@@ -11,7 +11,8 @@ import InputField from "../../../utils/InputField";
 import Swal from 'sweetalert2';
 import SelectField from '../../../utils/SelectField';
 import { Link } from 'react-router-dom';
-import { TablePagination } from "@mui/material";
+import { Pagination } from "../../../hooks/usePaginationRange";
+import { current } from "@reduxjs/toolkit";
 // import Modal from "@material-ui/core/Modal";
 
 
@@ -24,37 +25,40 @@ const validationSchema = Yup.object({
 
 const Leaves = () => {
   const dispatch = useDispatch();
-  const [leaveData,setLeaveData] = useState([])
+  const [leaveData, setLeaveData] = useState([]);
   const [show, setShow] = useState(false);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const rowsPerPage = 1;
   
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
+
+ 
   function myFunction() {
     let  startDate =  document.getElementById("startDate").value ;
     let  endDate = document.getElementById("endDate").value ;
     if (startDate && endDate){
         axiosInstance.get(`leave?start_date=${startDate}&end_date=${endDate}`).then((res)=>{
-        setLeaveData(res.data)})
+          setLeaveData(res.data["results"]);
+        })
         console.log(startDate,endDate)
     }    
   }   
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+ const handlePageChange = (page)=>{
+  setCurrentPage(page)
+ }
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
   
   const handleInputChange=()=>{
       const myStatus = document.getElementById("statusDropDown")
       const status = myStatus.value
       console.log("i am calling",myStatus.value)
       axiosInstance.get(`leave?status=${status}`).then((res)=>{
-      setLeaveData(res.data)})
+      setLeaveData(res.data["results"]);
+      setTotalPages(Math.ceil(res.data.count / rowsPerPage));
+    })
+      
   }
   const handleSubmit = async (values, { setSubmitting, setErrors }) => {
     const { date, type, leave_day_type, reason } = values;
@@ -62,8 +66,8 @@ const Leaves = () => {
       const result = await axiosInstance.post('leave/', { date, type, leave_day_type, reason });
       const data = result.data;
       Swal.fire ('Success!', 'Leave Request is Applied SuccessFully!', 'success') 
-      // const newLeave = [{"date": date, "type": type, "leave_day_type": leave_day_type, "status": "Pending" }]
-      // setLeaveData.set(...newLeave)
+      // const newLeave = result.data;
+      // setLeaveData(prevLeaveData => [newLeave, ...prevLeaveData])
       handleClose()
     } catch (err) {
       console.error("this is error i got ", err);
@@ -91,17 +95,27 @@ const Leaves = () => {
 
   const axiosInstance  =  useAxios();
   dispatch(navbarTitle({ navTitle: "Leaves" }));
+ function fetchLeaveData(page){
+  axiosInstance.get(`leave/`,{
+    params :{
+      page,
+    }
+  }).then((res)=>{
+    console.log("these is my result",res.data)
+    setLeaveData(res.data["results"]);
+    setTotalPages(Math.ceil(res.data.count / rowsPerPage));
+  })
+ }
+  
  
-  useEffect(()=>{
-    axiosInstance.get(`leave/`).then((res)=>{
-      setLeaveData(res.data)
-    })
-},[])
+useEffect(()=>{
+    fetchLeaveData(currentPage)
+},[currentPage])
 console.log("This is my all leave Data ",leaveData)
   return (
     <>
     <div style={{ marginLeft: "250px" }}>  
-    <div style={{display:`flex`,float:`right`,alignItems:`center`}}>
+    {/* <div style={{display:`flex`,float:`right`,alignItems:`center`}}>
     Total Approved Leaves  : <button type="button" class="btn btn-info">{leaveData.length>0 ? leaveData[0].total_approved_leaves : '-'}</button>
     Remaining Leaves : CL<button type="button" class="btn btn-info">{leaveData.length>0 ? leaveData[0]["remaining_all_leaves"][0].remaining_casual_leave : '-'}</button> 
     PL<button type="button" class="btn btn-info">{leaveData.length>0 ? leaveData[0]["remaining_all_leaves"][0].remaining_paid_leave : '-'}</button>
@@ -109,12 +123,12 @@ console.log("This is my all leave Data ",leaveData)
       UL<button type="button" class="btn btn-info">{leaveData.length>0 ? leaveData[0]["remaining_all_leaves"][0].remaining_unpaid_leave : '-'}</button> 
     </div>
     <br></br>
-    <br></br>    
+    <br></br>     */}
    
-    <Button variant="primary" onClick={handleShow}>
+     <Button variant="primary" onClick={handleShow}>
         Request Leave
-  </Button>
-  <Link to="/update-leave">
+  </Button> 
+  <Link to="/update-leave"> 
       <Button variant="primary">
         Update Requested Leave
       </Button>
@@ -125,10 +139,10 @@ console.log("This is my all leave Data ",leaveData)
     </Button>
     <Button>
     <input type="date" id="endDate" onChange={myFunction}></input>
-    </Button>
+    </Button> 
 
     </div>    
-      <select class="form-select form-select mb-3" aria-label=".form-select-lg example"
+      <select className="form-select form-select mb-3" aria-label=".form-select-lg example"
                  id="statusDropDown"  onChange={handleInputChange}>
                       <option selected value="">Select Status</option>
                       <option value="Approved">Approved</option>
@@ -205,38 +219,36 @@ console.log("This is my all leave Data ",leaveData)
         </Modal.Footer>
       </Modal>
      
-      <table class="table">
+      <table className="table mt-3">
         <thead>
           <tr>
-            <th scope="col">Leave Type</th>
-            <th scope="col">Date</th>
-            <th scope="col">Leave Day Type</th>
-            <th scope="col">Status</th>            
+            <th>Date</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Reason</th>
+            <th>Leave Day Type</th>
           </tr>
         </thead>
-        <tbody>          
-        {leaveData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((leave,index)=>((
-        <tr key = {index}>
-          <th scope="row">{leave.type}</th>
-          
-          <td>{leave.date}</td>
-          <td>{leave.leave_day_type}</td>
-          <td>{leave.status}</td>    
-      </tr>
-    )))}  
-         
+        <tbody>
+          {leaveData.length > 0 ? (
+            leaveData.map((leave) => (
+              <tr key={leave.id}>
+                <td>{leave.date}</td>
+                <td>{leave.type}</td>
+                <td>{leave.status}</td>
+                <td>{leave.reason}</td>
+                <td>{leave.leave_day_type}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5">No leave data available</td>
+            </tr>
+          )} 
         </tbody>
       </table>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={leaveData.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </div>
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+    </div> 
     </>
   );
 };

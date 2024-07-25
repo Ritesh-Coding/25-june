@@ -8,22 +8,25 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 
 #created By Ritesh
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size = 1
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 class LeaveEmployee(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.AllowAny]
     filter_backends = [DjangoFilterBackend]
-    pagination_class = PageNumberPagination
+    pagination_class = CustomPageNumberPagination
     filterset_fields = ['status']
-    queryset  = Leaves.objects.all()  
-    def get_queryset(self): 
+    queryset = Leaves.objects.all()
+    serializer_class = EmployeeLeaveSerializer
+
+    def get_queryset(self):
         start_date = self.request.query_params.get('start_date', None)
         end_date = self.request.query_params.get('end_date', None)
         if start_date and end_date:
-            print(start_date,"----------------------------",end_date)
-            return Leaves.objects.filter(employee_id =self.request.user.id,date__range=[start_date, end_date]).all()
-        logs = Leaves.objects.filter(employee_id =self.request.user.id)
-        return logs    
-    serializer_class = EmployeeLeaveSerializer
+            return Leaves.objects.filter(employee_id=self.request.user.id, date__range=[start_date, end_date]).all()
+        return Leaves.objects.filter(employee_id=self.request.user.id)
 
 
 class AssignedLeave(viewsets.ModelViewSet):
